@@ -1,0 +1,33 @@
+* {
+  vertical-align: middle;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  margin: 0;
+  overflow: hidden;
+  background: #eee;
+
+}
+
+.create-scene-button {
+  position: absolute;
+  color: white;
+  left: calc(50% - 125px);
+  top: calc(50% - 30px);
+  width: 250px;
+  height: 60px;
+  border-radius: 10px;
+  background-color: #888;
+  font-size: 1.8rem;
+  text-align: center;
+  line-height: 60px;
+  margin: auto;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+.create-scene-button:hover {
+  border: 2px solid white;
+}

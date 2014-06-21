@@ -10,7 +10,7 @@
 		<link id="theme" href="css/light.css" rel="stylesheet" />
 		<link id="rift" href="css/rift.css" rel="stylesheet" />
 
-		<script src="../build/three.min.js"></script>
+		<script src="../build/three.js"></script>
 		<script src="../examples/js/libs/system.min.js"></script>
 
 		<script src="../examples/js/controls/EditorControls.js"></script>
@@ -85,8 +85,48 @@
 
 			window.URL = window.URL || window.webkitURL;
 			window.BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
+			var QueryString = function () {
+			  // This function is anonymous, is executed immediately and
+			  // the return value is assigned to QueryString!
+			  var query_string = {};
+			  var query = window.location.search.substring(1);
+			  var vars = query.split("&");
+			  for (var i=0;i<vars.length;i++) {
+			    var pair = vars[i].split("=");
+			    	// If first entry with this name
+			    if (typeof query_string[pair[0]] === "undefined") {
+			      query_string[pair[0]] = pair[1];
+			    	// If second entry with this name
+			    } else if (typeof query_string[pair[0]] === "string") {
+			      var arr = [ query_string[pair[0]], pair[1] ];
+			      query_string[pair[0]] = arr;
+			    	// If third or later entry with this name
+			    } else {
+			      query_string[pair[0]].push(pair[1]);
+			    }
+			  }
+			    return query_string;
+			} ();
+
+			var getScene = function(sceneId){
+				var xmlHttp = null;
+				xmlHttp = new XMLHttpRequest();
+				xmlHttp.open( "GET", '/scene/' + sceneId, false );
+				xmlHttp.send( null );
+				return xmlHttp.responseText;
+			}
+
+			var saveScene = function(sceneId, sceneObj){
+				var xmlHttp = null;
+				xmlHttp = new XMLHttpRequest();
+				xmlHttp.open( "PUT", "/scene/" + sceneId, false );
+				xmlHttp.setRequestHeader("Content-type", "application/json");
+				xmlHttp.send( JSON.stringify(sceneObj) );
+				return xmlHttp.responseText;
+			}
 
 			var editor = new Editor();
+			editor.sceneId = QueryString.scene;
 
 			var viewport = new Viewport( editor ).setId( 'viewport' );
 			document.body.appendChild( viewport.dom );
@@ -104,8 +144,7 @@
 
 			editor.setTheme( editor.config.getKey( 'theme' ) );
 
-			editor.storage.init( function () {
-
+			var loadFromLocal = function () {
 				editor.storage.get( function ( state ) {
 
 					if ( state !== undefined ) {
@@ -115,32 +154,53 @@
 
 						editor.setScene( scene );
 
-					}
+						var selected = editor.config.getKey( 'selected' );
 
-					var selected = editor.config.getKey( 'selected' );
+						if ( selected !== undefined ) {
 
-					if ( selected !== undefined ) {
+							editor.selectByUuid( selected );
 
-						editor.selectByUuid( selected );
+						}
 
 					}
 
 				} );
+			};
 
+			var loadFromServer = function() {
+				var scene = getScene(editor.sceneId);
+				var loader = new THREE.ObjectLoader();
+				var sceneObj = JSON.parse(scene);
+				editor.setScene( loader.parse( sceneObj ) );
+			}
+
+			editor.storage.init( function () {
+
+				if (editor.sceneId) {
+					loadFromServer();
+				} else {
+					loadFromLocal();
+				}
 				//
 
 				var timeout;
 				var exporter = new THREE.ObjectExporter();
 
+				var saveInServer = function ( scene ) {
+					saveScene(editor.sceneId, exporter.parse( editor.scene ))
+				};
+
+				var saveInClient = function () {
+
+					editor.storage.set( exporter.parse( editor.scene ) );
+
+				};
+
 				var saveState = function ( scene ) {
 
 					clearTimeout( timeout );
-
-					timeout = setTimeout( function () {
-
-						editor.storage.set( exporter.parse( editor.scene ) );
-
-					}, 1000 );
+					var save = editor.sceneId? saveInServer: saveInClient;
+					timeout = setTimeout(save , 1000 );
 
 				};
 
