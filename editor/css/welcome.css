@@ -31,3 +31,12 @@ body {
 .create-scene-button:hover {
   border: 2px solid white;
 }
+
+.logo {
+  position: absolute;
+  top: calc(30% - 78px);
+  left: calc(50% - 404px);
+  width: 808px;
+  height: 157px;
+  background-image: url('/editor/images/playkanvas.png');
+}
