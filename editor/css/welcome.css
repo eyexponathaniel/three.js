@@ -33,6 +33,7 @@ body {
 }
 
 .logo {
+  display: none;
   position: absolute;
   top: calc(30% - 78px);
   left: calc(50% - 404px);
