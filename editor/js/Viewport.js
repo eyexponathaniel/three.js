@@ -19,16 +19,60 @@ var Viewport = function ( editor ) {
 
 	var objects = [];
 
+	var vrState;
+	var vrHMD;
+	var getVRState;
+
+	var getVRJSState = function() {
+		var polled = vr.pollState(vrState);
+		var state = polled? vrState : null;
+		return vrState;
+	};
+
+	var getMOZVRState = function () {
+		var orientation = vrState.getState().orientation;
+		var state = {
+			hmd : {
+				present : true,
+				rotation : [
+					orientation.w,
+					orientation.x,
+					orientation.y,
+					orientation.z
+				]
+			}
+		};
+		return state;
+	};
+
+	var getVRState;
+
 	function startVR() {
-		if (!vr.isInstalled()) {
-			//statusEl.innerText = 'NPVR plugin not installed!';
-			alert('NPVR plugin not installed!');
+		function gotVRDevices(devices) {
+			for (var i = 0; i < devices.length; ++i) {
+				if (devices[i] instanceof PositionSensorVRDevice) {
+					vrState = devices[i];
+				}
+				if (devices[i] instanceof HMDVRDevice) {
+					vrHMD = devices[i];
+				}
+			}
 		}
-		vr.load(function(error) {
+		if (navigator.mozGetVRDevices) {
+			getVRState = getMOZVRState;
+			navigator.mozGetVRDevices(gotVRDevices);
+		} else {
+			getVRState = getVRJSState;
+			if (!vr.isInstalled()) {
+				alert('NPVR plugin not installed!');
+			}
+			vr.load(function(error) {
 				if (error) {
 					alert('Plugin load failed: ' + error.toString());
 				}
-		});
+				vrState = new vr.State();
+			});
+		}
 	}
 
 	startVR();
@@ -433,12 +477,13 @@ var Viewport = function ( editor ) {
 
 	signals.windowResize.add( function () {
 
-		camera.aspect = container.dom.offsetWidth / container.dom.offsetHeight;
-		camera.updateProjectionMatrix();
+		if (!riftRenderer) {
+			camera.aspect = container.dom.offsetWidth / container.dom.offsetHeight;
+			camera.updateProjectionMatrix();
 
-		renderer.setSize( container.dom.offsetWidth, container.dom.offsetHeight );
-
-		render();
+			renderer.setSize( container.dom.offsetWidth, container.dom.offsetHeight );
+			render();
+		}
 
 	} );
 
@@ -572,19 +617,16 @@ var Viewport = function ( editor ) {
 	}
 
 	function animate() {
-
 		requestAnimationFrame( animate );
-
 	}
 
-	var vrstate = new vr.State();
+
 	// var riftCamera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1000 );
 	// riftCamera.position.fromArray( editor.config.getKey( 'camera' ).position );
 	// riftCamera.lookAt( new THREE.Vector3().fromArray( editor.config.getKey( 'camera' ).target ) );
 
 	function render() {
 
-		var polled;
 		var vrRenderer = riftRenderer;
 		sceneHelpers.updateMatrixWorld();
 		scene.updateMatrixWorld();
@@ -592,21 +634,24 @@ var Viewport = function ( editor ) {
 		if (vrRenderer) {
 			animate();
 		} else {
-
 			renderer.clear();
-			renderer.render( scene, camera );
+			renderer.render(scene, camera);
 
 			if ( renderer instanceof THREE.RaytracingRenderer === false ) {
 
-				renderer.render( sceneHelpers, camera );
+				renderer.render(sceneHelpers, camera);
 
 			}
 
 		}
 		function animate() {
-			polled = vr.pollState(vrstate);
-			riftRenderer.render( scene, camera, polled ? vrstate : null );
-			vr.requestAnimationFrame(render);
+			var vrState = getVRState();
+			riftRenderer.render(scene, camera, vrState);
+			if (vr) {
+				vr.requestAnimationFrame(render);
+			} else {
+				window.requestAnimationFrame(render);
+			}
 		}
 	}
 
@@ -618,9 +663,20 @@ var Viewport = function ( editor ) {
 			renderer.domElement.classList.add('fullscreen');
 			rendererDevicePixelRatio = renderer.devicePixelRatio;
 			renderer.devicePixelRatio = 1;
-			riftRenderer = new THREE.OculusRiftEffect(renderer);
+			if (navigator.mozGetVRDevices) {
+				document.addEventListener("mozfullscreenchange", fschanged, false);
+				riftRenderer = new THREE.MozOculusRiftEffect(renderer, camera, vrHMD);
+			} else {
+				riftRenderer = new THREE.OculusRiftEffect(renderer);
+			}
 		}
 		render();
+	};
+
+	function fschanged() {
+	  if (!document.mozFullScreenElement) {
+	  	container.stopRiftMode();
+	  }
 	}
 
 	container.stopRiftMode = function() {
@@ -628,7 +684,8 @@ var Viewport = function ( editor ) {
 			renderer.domElement.classList.remove('fullscreen');
 			renderer.devicePixelRatio = rendererDevicePixelRatio;
 			riftRenderer = undefined;
-			renderer.setSize( container.dom.offsetWidth, container.dom.offsetHeight );
+			renderer.setSize(container.dom.offsetWidth, container.dom.offsetHeight);
+			renderer.enableScissorTest(false);
 		}
 		render();
 	}
