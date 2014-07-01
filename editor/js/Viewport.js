@@ -19,64 +19,6 @@ var Viewport = function ( editor ) {
 
 	var objects = [];
 
-	var vrState;
-	var vrHMD;
-	var getVRState;
-
-	var getVRJSState = function() {
-		var polled = vr.pollState(vrState);
-		var state = polled? vrState : null;
-		return vrState;
-	};
-
-	var getMOZVRState = function () {
-		var orientation = vrState.getState().orientation;
-		var state = {
-			hmd : {
-				present : true,
-				rotation : [
-					orientation.w,
-					orientation.x,
-					orientation.y,
-					orientation.z
-				]
-			}
-		};
-		return state;
-	};
-
-	var getVRState;
-
-	function startVR() {
-		function gotVRDevices(devices) {
-			for (var i = 0; i < devices.length; ++i) {
-				if (devices[i] instanceof PositionSensorVRDevice) {
-					vrState = devices[i];
-				}
-				if (devices[i] instanceof HMDVRDevice) {
-					vrHMD = devices[i];
-				}
-			}
-		}
-		if (navigator.mozGetVRDevices) {
-			getVRState = getMOZVRState;
-			navigator.mozGetVRDevices(gotVRDevices);
-		} else {
-			getVRState = getVRJSState;
-			if (!vr.isInstalled()) {
-				alert('NPVR plugin not installed!');
-			}
-			vr.load(function(error) {
-				if (error) {
-					alert('Plugin load failed: ' + error.toString());
-				}
-				vrState = new vr.State();
-			});
-		}
-	}
-
-	startVR();
-
 	// helpers
 
 	var grid = new THREE.GridHelper( 500, 25 );
@@ -235,7 +177,6 @@ var Viewport = function ( editor ) {
 		signals.cameraChanged.dispatch( camera );
 
 	} );
-
 	// signals
 
 	signals.themeChanged.add( function ( value ) {
@@ -285,9 +226,10 @@ var Viewport = function ( editor ) {
 		renderer.autoClear = false;
 		renderer.autoUpdateScene = false;
 		renderer.setClearColor( clearColor );
-		renderer.setSize( container.dom.offsetWidth, container.dom.offsetHeight );
+		if (!renderer.vrModeEnabled) {
+			renderer.setSize( container.dom.offsetWidth, container.dom.offsetHeight );
+		}
 		container.dom.appendChild( renderer.domElement );
-
 		render();
 
 	} );
@@ -476,15 +418,12 @@ var Viewport = function ( editor ) {
 	} );
 
 	signals.windowResize.add( function () {
-
-		if (!riftRenderer) {
+		if (!renderer.vrModeEnabled) {
 			camera.aspect = container.dom.offsetWidth / container.dom.offsetHeight;
 			camera.updateProjectionMatrix();
-
-			renderer.setSize( container.dom.offsetWidth, container.dom.offsetHeight );
+			renderer.setSize(container.dom.offsetWidth, container.dom.offsetHeight );
 			render();
 		}
-
 	} );
 
 	signals.playAnimations.add( function (animations) {
@@ -518,8 +457,10 @@ var Viewport = function ( editor ) {
 
 		if ( System.support.webgl === true ) {
 
-			renderer = new THREE.WebGLRenderer( { antialias: true } );
+			renderer = new THREE.OculusRenderer( { antialias: true }, camera );
 			container.renderer = renderer;
+			var riftRendererConfigured = function() {};
+			renderer.configure(riftRendererConfigured);
 
 		} else {
 
@@ -617,60 +558,32 @@ var Viewport = function ( editor ) {
 	}
 
 	function animate() {
-		requestAnimationFrame( animate );
+		requestAnimationFrame( render );
 	}
-
 
 	// var riftCamera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1000 );
 	// riftCamera.position.fromArray( editor.config.getKey( 'camera' ).position );
 	// riftCamera.lookAt( new THREE.Vector3().fromArray( editor.config.getKey( 'camera' ).target ) );
 
 	function render() {
-
-		var vrRenderer = riftRenderer;
 		sceneHelpers.updateMatrixWorld();
 		scene.updateMatrixWorld();
-
-		if (vrRenderer) {
-			animate();
-		} else {
-			renderer.clear();
-			renderer.render(scene, camera);
-
-			if ( renderer instanceof THREE.RaytracingRenderer === false ) {
-
-				renderer.render(sceneHelpers, camera);
-
-			}
-
+		renderer.clear();
+		renderer.render(scene, camera);
+		if ( renderer instanceof THREE.RaytracingRenderer === false ) {
+			renderer.render(sceneHelpers, camera);
 		}
-		function animate() {
-			var vrState = getVRState();
-			riftRenderer.render(scene, camera, vrState);
-			if (vr) {
-				vr.requestAnimationFrame(render);
-			} else {
-				window.requestAnimationFrame(render);
-			}
-		}
+		//requestAnimationFrame( render );
 	}
 
-	var riftRenderer;
 	var rendererDevicePixelRatio;
 
 	container.startRiftMode = function() {
-		if (!riftRenderer) {
-			renderer.domElement.classList.add('fullscreen');
-			rendererDevicePixelRatio = renderer.devicePixelRatio;
-			renderer.devicePixelRatio = 1;
-			if (navigator.mozGetVRDevices) {
-				document.addEventListener("mozfullscreenchange", fschanged, false);
-				riftRenderer = new THREE.MozOculusRiftEffect(renderer, camera, vrHMD);
-			} else {
-				riftRenderer = new THREE.OculusRiftEffect(renderer);
-			}
-		}
+		rendererDevicePixelRatio = renderer.devicePixelRatio;
+		renderer.devicePixelRatio = 1;
+		renderer.enableVRMode(true);
 		render();
+		renderer.domElement.classList.add('fullscreen');
 	};
 
 	function fschanged() {
@@ -680,13 +593,11 @@ var Viewport = function ( editor ) {
 	}
 
 	container.stopRiftMode = function() {
-		if (riftRenderer) {
-			renderer.domElement.classList.remove('fullscreen');
-			renderer.devicePixelRatio = rendererDevicePixelRatio;
-			riftRenderer = undefined;
-			renderer.setSize(container.dom.offsetWidth, container.dom.offsetHeight);
-			renderer.enableScissorTest(false);
-		}
+		renderer.enableVRMode(false);
+		renderer.domElement.classList.remove('fullscreen');
+		renderer.devicePixelRatio = rendererDevicePixelRatio;
+		renderer.setSize(container.dom.offsetWidth, container.dom.offsetHeight);
+		renderer.enableScissorTest(false);
 		render();
 	}
 

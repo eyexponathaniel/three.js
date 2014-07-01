@@ -159,7 +159,6 @@ THREE.OculusRiftEffect.prototype.render = function(scene, camera, vrstate) {
   }
 
   // Shift around to the the eye center.
-
   function convertMatrix(source, target) {
     for (var n = 0; n < 16; n++) {
       target.elements[n] = source[n];

@@ -20,10 +20,10 @@ Sidebar.Rift = function ( editor ) {
 			viewport.startRiftMode();
 		}
 
-		// document.body.addEventListener( 'mouseup', onMouseUp, false );
-		// function onMouseUp() {
-		// 	viewport.stopRiftMode();
-		// }
+		document.body.addEventListener( 'mouseup', onMouseUp, false );
+		function onMouseUp() {
+			viewport.stopRiftMode();
+		}
 
 	objectRiftButton.dom.className = 'Button Rift';
 
