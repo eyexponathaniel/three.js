@@ -60,10 +60,10 @@ THREE.OculusRenderer = function(options) {
 		// Rotate by Oculus data.
 		if (vrState) {
 			var quat = new THREE.Quaternion(
-					vrstate.hmd.rotation[0],
-					vrstate.hmd.rotation[1],
-					vrstate.hmd.rotation[2],
-					vrstate.hmd.rotation[3]);
+					vrState.hmd.rotation[0],
+					vrState.hmd.rotation[1],
+					vrState.hmd.rotation[2],
+					vrState.hmd.rotation[3]);
 			var rotMat = new THREE.Matrix4();
 			rotMat.setRotationFromQuaternion(quat);
 			eyeWorldMatrix.multiply(rotMat);
@@ -217,8 +217,8 @@ THREE.OculusRenderer = function(options) {
 	};
 
 	this.getVRJSOculusState = function() {
-		var polled = vr.pollState(vrState);
-		var state = polled? vrState : null;
+		var polled = vr.pollState(this.vrState);
+		var state = polled? this.vrState : null;
 		return state;
 	};
 
@@ -226,8 +226,10 @@ THREE.OculusRenderer = function(options) {
 		this.vrModeEnabled = !!enable;
 		if (this.vrModeEnabled) {
 			this.setSize(1280, 800);
-			this.vrHMD.xxxToggleElementVR(this.domElement);
-			this.domElement.mozRequestFullScreen({ vrDisplay: this.vrHMD });
+			if (this.vrMode === 'MOZ') {
+				this.vrHMD.xxxToggleElementVR(this.domElement);
+				this.domElement.mozRequestFullScreen({ vrDisplay: this.vrHMD });
+			}
 		}
 	};
 
