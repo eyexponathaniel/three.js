@@ -1573,16 +1573,6 @@ Object.defineProperties( WebGLRenderTarget.prototype, {
 
 //
 
-Object.assign( WebVRManager.prototype, {
-
-	getStandingMatrix: function () {
-
-		console.warn( 'THREE.WebVRManager: .getStandingMatrix() has been removed.' );
-
-	}
-
-} );
-
 Object.defineProperties( WebVRManager.prototype, {
 
 	standing: {
