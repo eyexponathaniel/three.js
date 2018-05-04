@@ -126,28 +126,7 @@ THREE.TrackedController = function ( id ) {
     context.font="85px Helvetica";
     context.fillStyle="#FFFFFF";
     context.fillText("Press any button to next", 35, 80);
-    // var imageData = context.getImageData( 0, 0, 256, 256 );
-    // var data = imageData.data;
-    // var swatchColor = new THREE.Color();
-
-    // for ( var i = 0, j = 0; i < data.length; i += 4, j ++ ) {
-
-    //   var x = ( ( j % 256 ) / 256 ) - 0.5;
-    //   var y = ( Math.floor( j / 256 ) / 256 ) - 0.5;
-
-    //   swatchColor.setHSL( Math.atan2( y, x ) / PI2, 1,( 0.5 - Math.sqrt( x * x + y * y ) ) * 2.0 );
-
-    //   data[ i + 0 ] = swatchColor.r * 256;
-    //   data[ i + 1 ] = swatchColor.g * 256;
-    //   data[ i + 2 ] = swatchColor.b * 256;
-    //   data[ i + 3 ] = 256;
-
-    // }
-
-    // context.putImageData( imageData, 0, 0 );
-
     return new THREE.CanvasTexture( canvas );
-
   }
 
 };
