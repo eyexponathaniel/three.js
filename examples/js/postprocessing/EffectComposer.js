@@ -6,6 +6,8 @@ THREE.EffectComposer = function ( renderer, renderTarget ) {
 
 	this.renderer = renderer;
 
+	window.addEventListener('vrdisplaypresentchange', this.resize.bind(this));
+
 	if ( renderTarget === undefined ) {
 
 		var parameters = {
@@ -73,17 +75,30 @@ Object.assign( THREE.EffectComposer.prototype, {
 
 	},
 
-	render: function ( delta ) {
+	render: function ( delta, starti ) {
 
 		var maskActive = false;
 
 		var pass, i, il = this.passes.length;
 
-		for ( i = 0; i < il; i ++ ) {
+		var scope = this;
+
+		for ( i = starti || 0; i < il; i ++ ) {
 
 			pass = this.passes[ i ];
 
 			if ( pass.enabled === false ) continue;
+
+			if ( i === 0 && this.renderer.vr.enabled && pass.scene) {
+				pass.scene.onAfterRender = function () {
+					scope.renderer.vr.enabled = false;
+					scope.render(delta, i + 1); 
+					scope.renderer.vr.enabled = true;
+				}
+				pass.render( this.renderer, this.writeBuffer, this.readBuffer, delta, maskActive );
+				pass.scene.onAfterRender = undefined;	
+				return;
+			} 
 
 			pass.render( this.renderer, this.writeBuffer, this.readBuffer, delta, maskActive );
 
@@ -154,6 +169,13 @@ Object.assign( THREE.EffectComposer.prototype, {
 			this.passes[ i ].setSize( width, height );
 
 		}
+
+	},
+
+	resize: function ( ) {
+
+		var rendererSize = renderer.getDrawingBufferSize();
+		this.setSize(rendererSize.width, rendererSize.height);
 
 	}
 

@@ -16,6 +16,7 @@
 
 		<script src="../build/three.js"></script>
 
+		<script src="js/vr/WebVR.js"></script>
 		<script src="js/shaders/CopyShader.js"></script>
 		<script src="js/shaders/DotScreenShader.js"></script>
 		<script src="js/shaders/RGBShiftShader.js"></script>
@@ -23,7 +24,8 @@
 		<script src="js/postprocessing/EffectComposer.js"></script>
 		<script src="js/postprocessing/RenderPass.js"></script>
 		<script src="js/postprocessing/ShaderPass.js"></script>
-
+		<script src="js/shaders/LuminosityHighPassShader.js"></script>
+		<script src="js/postprocessing/UnrealBloomPass.js"></script>
 
 		<script>
 
@@ -38,6 +40,7 @@
 				renderer = new THREE.WebGLRenderer();
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.vr.enabled = true;
 				document.body.appendChild( renderer.domElement );
 
 				//
@@ -72,18 +75,23 @@
 				scene.add( light );
 
 				// postprocessing
-
 				composer = new THREE.EffectComposer( renderer );
-				composer.addPass( new THREE.RenderPass( scene, camera ) );
-
-				var effect = new THREE.ShaderPass( THREE.DotScreenShader );
-				effect.uniforms[ 'scale' ].value = 4;
+				var effect = new THREE.RenderPass( scene, camera );
 				composer.addPass( effect );
 
-				var effect = new THREE.ShaderPass( THREE.RGBShiftShader );
-				effect.uniforms[ 'amount' ].value = 0.0015;
-				effect.renderToScreen = true;
-				composer.addPass( effect );
+				// var effect = new THREE.ShaderPass( THREE.DotScreenShader );
+				// effect.uniforms[ 'scale' ].value = 4;
+				// composer.addPass( effect );
+
+				// var effect = new THREE.ShaderPass( THREE.RGBShiftShader );
+				// effect.uniforms[ 'amount' ].value = 0.0015;
+				// effect.renderToScreen = true;
+				// composer.addPass( effect );
+
+				var bloomPass = new THREE.UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 ); //1.0, 9, 0.5, 512);
+				bloomPass.renderToScreen = true;
+				composer.addPass( bloomPass );
+
 
 				//
 
@@ -105,12 +113,13 @@
 
 				requestAnimationFrame( animate );
 
-				object.rotation.x += 0.005;
-				object.rotation.y += 0.01;
-
+				//object.rotation.x += 0.005;
+				//object.rotation.y += 0.01;
 				composer.render();
 
 			}
+
+			document.body.appendChild( WEBVR.createButton( renderer ) );
 
 		</script>
 
