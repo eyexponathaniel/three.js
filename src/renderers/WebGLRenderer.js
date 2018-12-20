@@ -1066,6 +1066,12 @@ function WebGLRenderer( parameters ) {
 
 	}
 
+	this.setFramebuffer = function ( value ) {
+
+			_currentFramebuffer = value;
+
+	}
+
 	// Rendering
 
 	this.render = function ( scene, camera, renderTarget, forceClear ) {
